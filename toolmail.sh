@@ -260,8 +260,35 @@ toolmail
        --install            [user_name]   [domain]
        --install-toolmail
        --add-user		[user_name]
+       --help|-h
+       --additional-help
 '	
 	die 
+}
+
+function additional_helper(){
+echo ""
+echo "Use toolnet to configure bind"
+echo "Your dns must be like :"
+echo ""
+echo '
+$ORIGIN <DOMAIN>
+$TTL	86400
+@	IN	SOA	ns1. root.localhost. (
+1		; Serial
+604800		; Refresh
+86400		; Retry
+2419200		; Expire
+86400 )	; Negative Cache TTL
+;
+@	IN	NS	ns1
+@	IN	PTR	mail
+@	IN	MX	10 mail
+ns1	IN	A	<IP>
+mail	IN	A	<IP>
+'
+echo ""
+die
 }
 
 function init_menu(){
@@ -275,6 +302,9 @@ function init_menu(){
               "--remove-all")
                      remove_all
                      die;;
+              "--additional-help")
+			additional_helper 
+                     die ;
 		"--help"|"-h")
 			helper 
                      die ;;
