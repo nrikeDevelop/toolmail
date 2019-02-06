@@ -56,7 +56,8 @@ if [ $(id -u) = 0 ]
 then
 	#CHECK PACKAGE 
        is_installed postfix
-       is_installed dovecot-core dovecot-imapd
+       is_installed dovecot-core 
+       is_installed dovecot-imapd
 else
 	echo "You must be root to acces"
 	exit 1
@@ -230,6 +231,10 @@ spamassassin    unix  -       n       n       -       -       pipe user=debian-s
 '>>/etc/postfix/master.cf
 
 echo_e yellow "[?] >/etc/postfix/master.cf"
+
+
+service postfix restart
+service dovecot restart
 
 die
 
