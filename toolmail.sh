@@ -118,6 +118,11 @@ then
 #POSTFIX
 #https://upcloud.com/community/tutorials/secure-postfix-using-lets-encrypt/
 
+echo_e yellow "use root "
+sleep 1       
+sudo dpkg-reconfigure postfix
+
+
 sudo postconf -e 'home_mailbox = Maildir/'
 sudo postconf -e "mydomain = $DOMAIN"
 sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$DOMAIN/fullchain.pem"
