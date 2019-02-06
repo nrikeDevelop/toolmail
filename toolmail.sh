@@ -90,89 +90,52 @@ then
        fi
 
 #CREATE CERTIFICATE
-       echo_e "[?] If there is an error with the certificate, check the server"
-       certbot certonly --standalone --preferred-challenges http -d $DOMAIN
-       echo ""
-       echo -ne "[+] correctly? (y/n): "
-	read OPTION
-	if  ! yes_or_not $OPTION
-	then
-              echo_e yellow "[?] check the server, services listen port 80"
-              die
+
+       if [ ! -d /etc/letsencrypt/live/$DOMAIN ]
+       then
+
+              echo_e "[?] If there is an error with the certificate, check the server"
+              certbot certonly --standalone --preferred-challenges http -d $DOMAIN
+              echo ""
+              echo -ne "[+] correctly? (y/n): "
+              read OPTION
+              if  ! yes_or_not $OPTION
+              then
+                     echo_e yellow "[?] check the server, services listen port 80"
+                     die
+              fi
+
+       else
+              echo_e green "[+] Certificate already exist"
        fi
+
+
 
 #CREATE USER 
        adduser $USER
 
-echo '
-# See /usr/share/postfix/main.cf.dist for a commented, more complete version
+#POSTFIX
+#https://upcloud.com/community/tutorials/secure-postfix-using-lets-encrypt/
 
+sudo postconf -e 'home_mailbox = Maildir/'
+sudo postconf -e "mydomain = $DOMAIN"
+sudo postconf -e "smtpd_tls_cert_file = /etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+sudo postconf -e "smtpd_tls_key_file = /etc/letsencrypt/live/$DOMAIN/privkey.pem"
+sudo postconf -e 'smtpd_sasl_type = dovecot'
+sudo postconf -e 'smtpd_sasl_path = private/auth'
+sudo postconf -e 'smtpd_sasl_local_domain ='
+sudo postconf -e 'smtpd_sasl_security_options = noanonymous'
+sudo postconf -e 'broken_sasl_auth_clients = yes'
+sudo postconf -e 'smtpd_sasl_auth_enable = yes'
+sudo postconf -e 'smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks,reject_unauth_destination'
+sudo postconf -e 'smtp_tls_security_level = may'
+sudo postconf -e 'smtpd_tls_security_level = may'
+sudo postconf -e 'smtp_tls_note_starttls_offer = yes'
+sudo postconf -e 'smtpd_tls_loglevel = 1'
+sudo postconf -e 'smtpd_tls_received_header = yes'
 
-# Debian specific:  Specifying a file name will cause the first
-# line of that file to be used as the name.  The Debian default
-# is /etc/mailname.
-#myorigin = /etc/mailname
-
-smtpd_banner = $myhostname ESMTP $mail_name (Raspbian)
-biff = no
-
-append_dot_mydomain = no
-
-# Uncomment the next line to generate "delayed mail" warnings
-#delay_warning_time = 4h
-
-readme_directory = no
-
-# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 2 on
-# fresh installs.
-compatibility_level = 2
-
-# TLS parameters
-smtpd_tls_cert_file = /etc/letsencrypt/live/mail.raspylab.cf/fullchain.pem
-smtpd_tls_key_file = /etc/letsencrypt/live/mail.raspylab.cf/privkey.pem
-smtpd_use_tls=yes
-smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
-smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
-
-# See /usr/share/doc/postfix/TLS_README.gz in the postfix-doc package for
-# information on enabling SSL in the smtp client.
-
-smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
-myhostname = '$DOMAIN'
-alias_maps = hash:/etc/aliases
-alias_database = hash:/etc/aliases
-myorigin = /etc/mailname
-mydestination = $myhostname, mail.raspylab.cf, raspylab.cf, localhost.cf, localhost
-relayhost =
-mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
-mailbox_size_limit = 0
-recipient_delimiter = +
-inet_interfaces = all
-inet_protocols = all
-
-home_mailbox = Maildir/
-mailbox_command =
-smtpd_recipient_restrictions =
-       permit_sasl_authenticated,
-       permit_mynetworks,
-       reject_unauth_destination
-smtpd_helo_required = yes
-smtpd_helo_restrictions =
-       permit_mynetworks,
-       permit_sasl_authenticated,
-       reject_invalid_helo_hostname,
-       reject_non_fqdn_helo_hostname,
-       reject_unknown_helo_hostname,
-       check_helo_access hash:/etc/postfix/helo_access
-smtpd_sasl_type = dovecot
-smtpd_sasl_path = private/auth
-smtpd_sasl_auth_enable = yes
-smtpd_tls_auth_only = yes
-milter_protocol = 2
-milter_default_action = accept
-smtpd_milters = inet:localhost:12301
-non_smtpd_milters = inet:localhost:12301
-'> /etc/postfix/main.cf
+#DOVECOT
+#https://www.hackster.io/gulyasal/make-a-mail-server-out-of-your-rpi3-5829f0
 
 sudo maildirmake.dovecot /etc/skel/Maildir
 sudo maildirmake.dovecot /etc/skel/Maildir/.Drafts
@@ -187,11 +150,14 @@ sudo chmod -R 700 /home/$USER/Maildir
 
 echo "$DOMAIN         REJECT          Email rejected - cannot verify identity" >/etc/postfix/helo_access
 
+postmap /etc/postfix/helo_access
 
 echo '
 !include_try /usr/share/dovecot/protocols.d/*.protocol
 listen = *
-dict { }
+dict {
+       #configurations suppressed
+}
 !include_try local.conf
 '>/etc/dovecot/dovecot.conf
 
