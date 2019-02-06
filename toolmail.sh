@@ -58,6 +58,9 @@ then
        is_installed postfix
        is_installed dovecot-core 
        is_installed dovecot-imapd
+       is_installed opendkim
+       is_installed opendkim-tools
+
 else
 	echo "You must be root to acces"
 	exit 1
@@ -243,9 +246,92 @@ echo_e yellow "[?] >/etc/postfix/master.cf"
 service postfix restart
 service dovecot restart
 
+#TODO : CONFIGURATION CORRECT
+
 #DKIM
 #https://www.hackster.io/gulyasal/make-a-mail-server-out-of-your-rpi3-5829f0
 
+echo ' 
+AutoRestart             Yes
+AutoRestartRate         10/1h
+SyslogSuccess           Yes
+LogWhy                  Yes
+Canonicalization        relaxed/simple
+ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
+InternalHosts           refile:/etc/opendkim/TrustedHosts
+KeyTable                refile:/etc/opendkim/KeyTable
+SigningTable            refile:/etc/opendkim/SigningTable
+Mode                    sv
+PidFile                 /var/run/opendkim/opendkim.pid
+SignatureAlgorithm      rsa-sha256
+UserID                  opendkim:opendkim
+Socket                  inet:12301@localhost
+'>/etc/opendkim.conf
+
+#if abstract check
+echo '
+
+# Command-line options specified here will override the contents of
+# /etc/opendkim.conf. See opendkim(8) for a complete list of options.
+#DAEMON_OPTS=""
+# Change to /var/spool/postfix/var/run/opendkim to use a Unix socket with
+# postfix in a chroot:
+#RUNDIR=/var/spool/postfix/var/run/opendkim
+RUNDIR=/var/run/opendkim
+#
+# Uncomment to specify an alternate socket
+# Note that setting this will override any Socket value in opendkim.conf
+# default:
+SOCKET=local:$RUNDIR/opendkim.sock
+# listen on all interfaces on port 54321:
+#SOCKET=inet:54321
+# listen on loopback on port 12345:
+
+#TODO: THIS UNCOMENT
+SOCKET=inet:12345@localhost
+
+# listen on 192.0.2.1 on port 12345:
+#SOCKET=inet:12345@192.0.2.1
+USER=opendkim
+GROUP=opendkim
+PIDFILE=$RUNDIR/$NAME.pid
+EXTRAAFTER=
+'>>/etc/default/opendkim
+
+sudo mkdir /etc/opendkim
+sudo mkdir /etc/opendkim/keys
+
+#INSTALLED AUTO
+#echo '
+#127.0.0.1
+#localhost
+#192.168.0.1/24
+#'$DOMAIN'
+#'>/etc/opendkim/TrustedHosts
+
+#echo 'mail._domainkey.example.com example.com:mail:/etc/opendkim/keys/example.com/mail.private'>/etc/opendkim/KeyTable
+
+#echo '*@example.com mail._domainkey.example.com'>/etc/opendkim/SigningTable
+
+mkdir /etc/opendkim/keys/$DOMAIN
+cd /etc/opendkim/keys/$DOMAIN
+opendkim-genkey -s mail -d $DOMAIN
+chown opendkim:opendkim mail.private
+chmod 777 mail.txt
+$KEY=$(cat mail.txt)
+
+echo_e yellow "Introduce your FQDN"
+read FQDN
+
+echo $KEY >> /etc/bind/$FQDN/db.external.conf
+
+sudo service dovecot reload
+sudo service dovecot restart
+sudo service postfix reload
+sudo service postfix restart
+sudo service opendkim restart
+
+echo_e green "TRY IT"
 
 die
 
