@@ -164,6 +164,7 @@ listen = *
 dict {
        #configurations suppressed
 }
+!include conf.d/*.conf
 !include_try local.conf
 '>/etc/dovecot/dovecot.conf
 
@@ -178,7 +179,9 @@ namespace inbox {
     inbox = yes
 }
 mail_privileged_group = mail
-protocol !indexer-worker { }
+protocol !indexer-worker { 
+       #configure supressed
+}
 ' >/etc/dovecot/conf.d/10-mail.conf
 
 echo_e yellow "[?] >/etc/dovecot/conf.d/10-mail.conf has been configured"
