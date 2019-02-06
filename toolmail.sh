@@ -240,9 +240,12 @@ spamassassin    unix  -       n       n       -       -       pipe user=debian-s
 
 echo_e yellow "[?] >/etc/postfix/master.cf"
 
-
 service postfix restart
 service dovecot restart
+
+#DKIM
+#https://www.hackster.io/gulyasal/make-a-mail-server-out-of-your-rpi3-5829f0
+
 
 die
 
