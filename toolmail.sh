@@ -304,7 +304,7 @@ function init_menu(){
                      die;;
               "--additional-help")
 			additional_helper 
-                     die ;
+                     die ;;
 		"--help"|"-h")
 			helper 
                      die ;;
