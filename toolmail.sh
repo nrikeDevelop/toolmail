@@ -187,9 +187,17 @@ sudo maildirmake.dovecot /etc/skel/Maildir/.Junk
 sudo chown -R $USER:$USER /home/$USER/Maildir
 sudo chmod -R 700 /home/$USER/Maildir
 
-echo "$FQDN         REJECT          Email rejected - cannot verify identity" >/etc/postfix/helo_access
+echo "$DOMAIN         REJECT          Email rejected - cannot verify identity" >/etc/postfix/helo_access
 
-echo 'listen = *'>>/etc/dovecot/dovecot.conf
+
+echo '
+!include_try /usr/share/dovecot/protocols.d/*.protocol
+listen = *
+dict { }
+!include_try local.conf
+'>/etc/dovecot/dovecot.conf
+
+echo_e yellow "[?] >/etc/dovecot/dovecot.conf has been configured"
 
 mv /etc/dovecot/conf.d/10-mail.conf /etc/dovecot/conf.d/10-mail.conf.back
 rm -rf /etc/dovecot/conf.d/10-mail.conf
@@ -202,6 +210,9 @@ namespace inbox {
 mail_privileged_group = mail
 protocol !indexer-worker { }
 ' >/etc/dovecot/conf.d/10-mail.conf
+
+echo_e yellow "[?] >/etc/dovecot/conf.d/10-mail.conf has been configured"
+
 
 echo '
 service imap-login {
@@ -222,11 +233,18 @@ service auth {
 }
 '>/etc/dovecot/conf.d/10-master.conf
 
+echo_e yellow "[?] >/etc/dovecot/conf.d/10-master.conf has been configured"
+
+
+
 echo '
 disable_plaintext_auth = no
 auth_mechanisms = plain login
 !include auth-system.conf.ext
 '>/etc/dovecot/conf.d/10-auth.conf
+
+echo_e yellow "[?] >/etc/dovecot/conf.d/10-auth.conf has been configured"
+
 
 
 echo '
@@ -236,6 +254,9 @@ ssl_cert = </etc/letsencrypt/live/'$DOMAIN'/fullchain.pem
 ssl_key = </etc/letsencrypt/live/'$DOMAIN'/privkey.pem 
 '>/etc/dovecot/conf.d/10-ssl.conf
 
+echo_e yellow "[?] >/etc/dovecot/conf.d/10-ssl.conf"
+
+
 echo '
 smtps     inet  n       -       -       -       -       smtpd
  -o syslog_name=postfix/smtps
@@ -243,6 +264,10 @@ smtps     inet  n       -       -       -       -       smtpd
  -o smtpd_recipient_restrictions=permit_sasl_authenticated,reject
 spamassassin    unix  -       n       n       -       -       pipe user=debian-spamd argv=/usr/bin/spamc -f -e /usr/sbin/sendmail -oi -f ${sender} ${recipient}
 '>>/etc/postfix/master.cf
+
+echo_e yellow "[?] >/etc/postfix/master.cf"
+
+die
 
 fi
 }
