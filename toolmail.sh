@@ -97,11 +97,9 @@ then
 	read OPTION
 	if  ! yes_or_not $OPTION
 	then
+              echo_e yellow "[?] check the server, services listen port 80"
               die
        fi
-
-       echo "bien"
-       die
 
 #CREATE USER 
        adduser $USER
